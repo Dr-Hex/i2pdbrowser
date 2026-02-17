@@ -1,6 +1,6 @@
 @echo off
 
-REM Copyright (c) 2013-2025, The PurpleI2P Project
+REM Copyright (c) 2013-2026, The PurpleI2P Project
 REM This file is part of Purple i2pd project and licensed under BSD3
 REM See full license text in LICENSE file at top of project tree
 
@@ -8,7 +8,8 @@ setlocal enableextensions
 
 set CURL=%~dp0curl.exe
 set FFversion=115.20.0esr
-set I2Pdversion=2.56.0
+set I2Pdversion=2.59.0
+
 call :GET_ARGS %*
 call :GET_LOCALE
 call :GET_PROXY
@@ -17,21 +18,27 @@ call :GET_ARCH
 if "%locale%"=="ru" (
 	echo Сборка I2Pd Browser Portable
 	echo Язык браузера: %locale%, архитектура: %xOS%
-	echo.
-	echo Загрузка установщика Firefox ESR
 ) else (
 	echo Building I2Pd Browser Portable
 	echo Browser locale: %locale%, architecture: %xOS%
-	echo.
-	echo Downloading Firefox ESR installer
+)
+echo.
+
+if exist ..\Firefox (
+	if "%locale%"=="ru" (
+		echo Firefox уже скачан. Пропускаю.
+	) else (
+		echo Firefox already downloaded. Skip.
+	)
+	goto GET_I2PD
 )
 
-"%CURL%" -L -f -# -o firefox.exe https://ftp.mozilla.org/pub/firefox/releases/%FFversion%/%xOS%/%locale%/Firefox%%20Setup%%20%FFversion%.exe %$X%
-if errorlevel 1 (
-	echo ERROR:%ErrorLevel%
-	pause
-	exit
-) else (echo OK!)
+if "%locale%"=="ru" (
+	echo Загрузка установщика Firefox ESR
+) else (
+	echo Downloading Firefox ESR installer
+)
+call :DOWNLOAD firefox.exe https://ftp.mozilla.org/pub/firefox/releases/%FFversion%/%xOS%/%locale%/Firefox%%%%20Setup%%%%20%FFversion%.exe
 
 echo.
 if "%locale%"=="ru" (
@@ -94,14 +101,10 @@ if "%locale%"=="ru" (
 ) else (
 	echo Downloading language packs
 )
-"%CURL%" -L -f -# -o ..\Firefox\App\Firefox\browser\extensions\langpack-ru@firefox.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4144376/russian_ru_language_pack-115.0.20230726.201356.xpi
-if errorlevel 1 ( echo ERROR:%ErrorLevel% && pause && exit ) else (echo OK!)
-"%CURL%" -L -f -# -o ..\Firefox\App\Firefox\browser\extensions\ruspell-wiktionary@addons.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4215701/2696307-1.77.xpi
-if errorlevel 1 ( echo ERROR:%ErrorLevel% && pause && exit ) else (echo OK!)
-"%CURL%" -L -f -# -o ..\Firefox\App\Firefox\browser\extensions\langpack-en-US@firefox.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4144407/english_us_language_pack-115.0.20230726.201356.xpi
-if errorlevel 1 ( echo ERROR:%ErrorLevel% && pause && exit ) else (echo OK!)
-"%CURL%" -L -f -# -o ..\Firefox\App\Firefox\browser\extensions\en-US@dictionaries.addons.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4175230/us_english_dictionary-115.0.xpi
-if errorlevel 1 ( echo ERROR:%ErrorLevel% && pause && exit ) else (echo OK!)
+call :DOWNLOAD ..\Firefox\App\Firefox\browser\extensions\langpack-ru@firefox.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4144376/russian_ru_language_pack-115.0.20230726.201356.xpi
+call :DOWNLOAD ..\Firefox\App\Firefox\browser\extensions\ruspell-wiktionary@addons.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4215701/2696307-1.77.xpi
+call :DOWNLOAD ..\Firefox\App\Firefox\browser\extensions\langpack-en-US@firefox.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4144407/english_us_language_pack-115.0.20230726.201356.xpi
+call :DOWNLOAD ..\Firefox\App\Firefox\browser\extensions\en-US@dictionaries.addons.mozilla.org.xpi https://addons.mozilla.org/firefox/downloads/file/4175230/us_english_dictionary-115.0.xpi
 
 echo.
 if "%locale%"=="ru" (
@@ -109,8 +112,7 @@ if "%locale%"=="ru" (
 ) else (
 	echo Downloading NoScript extension
 )
-"%CURL%" -L -f -# -o ..\Firefox\App\Firefox\browser\extensions\{73a6fe31-595d-460b-a920-fcc0f8843232}.xpi https://addons.mozilla.org/firefox/downloads/file/4411102/noscript-12.1.1.xpi
-if errorlevel 1 ( echo ERROR:%ErrorLevel% && pause && exit ) else (echo OK!)
+call :DOWNLOAD ..\Firefox\App\Firefox\browser\extensions\{73a6fe31-595d-460b-a920-fcc0f8843232}.xpi https://addons.mozilla.org/firefox/downloads/file/4411102/noscript-12.1.1.xpi
 
 echo.
 if "%locale%"=="ru" (
@@ -129,15 +131,30 @@ copy /Y firefox-portable\* ..\Firefox\ > nul
 xcopy /E /Y preferences\* ..\Firefox\App\Firefox\ > nul
 echo OK!
 
+:GET_I2PD
 echo.
+mkdir "..\i2pd" 2>nul
+for %%i in ("%cd%\..\i2pd") do set i2pd_path=%%~fi\i2pd.exe
+
 if "%locale%"=="ru" (
 	echo Загрузка I2Pd
 ) else (
 	echo Downloading I2Pd
 )
-"%CURL%" -L -f -# -O https://github.com/PurpleI2P/i2pd/releases/download/%I2Pdversion%/i2pd_%I2Pdversion%_%xOS%_mingw.zip
-if errorlevel 1 ( echo ERROR:%ErrorLevel% && pause && exit ) else (echo OK!)
-7z x -y -o..\i2pd i2pd_%I2Pdversion%_%xOS%_mingw.zip i2pd.exe > nul
+call :DOWNLOAD i2pd_%I2Pdversion%_%xOS%_mingw.zip https://github.com/PurpleI2P/i2pd/releases/download/%I2Pdversion%/i2pd_%I2Pdversion%_%xOS%_mingw.zip
+7z x -y -o..\i2pd i2pd_%I2Pdversion%_%xOS%_mingw.zip i2pd.exe > nul || (
+	echo ERROR:%ErrorLevel%
+	if "%locale%"=="ru" (
+		echo Пожалуйста, нажмите ДА в окнах UAC чтобы добавить i2pd в иключения Защитника Windows
+	) else (
+		echo Please, press YES in UAC windows to add i2pd in Windows Defender exclusion
+	)
+	call :ADD_DEFENDER_EXCLUSION "%cd%\i2pd_%I2Pdversion%_%xOS%_mingw.zip"
+	call :ADD_DEFENDER_EXCLUSION "%i2pd_path%"
+	call :WARN_ANTIVIRUS
+	%$pause% 5
+	goto GET_I2PD
+)
 del /Q i2pd_%I2Pdversion%_%xOS%_mingw.zip
 
 xcopy /E /I /Y i2pd ..\i2pd > nul
@@ -174,6 +191,45 @@ set arg_skipwait=
 for %%a in (%*) do (
 	if "%%a"=="--skipwait" set arg_skipwait=yes
 )
+goto :eof
+
+rem Процедура скачивания файла с бесконечным повтором в случае неудачи
+rem %1 : путь к файлу для сохранения
+rem %2 : URL адрес 
+:DOWNLOAD
+if "%locale%"=="ru" (
+	echo Загружаю URL: %2
+) else (
+	echo Downloading URL: %2
+)
+"%CURL%" -k -L -f -# -o "%1" "%2" %$X% || (
+	echo ERROR:%ErrorLevel%
+	if "%locale%"=="ru" (
+		echo Попытка повторного скачивания
+	) else (
+		echo Attempt downloading again
+	)
+	%$pause% 5
+	goto DOWNLOAD
+)
+echo OK!
+goto :eof
+
+rem Предупреждает о возможном вмешательстве антивируса
+rem Предлагает его отключить, открыв окно настроек Windows Defender
+:WARN_ANTIVIRUS
+if "%locale%"=="ru" (
+	echo Ошибка распаковки i2pd. Убедитесь, что Windows Defender отключен.
+) else (
+	echo Error unpacking i2pd. Make sure Windows Defender is disabled.
+)
+explorer.exe "WindowsDefender://ThreatSettings"
+goto :eof
+
+rem Добавляет в исключения WD переданный аргументом объект (вызывает окно UAC)
+rem %1 : файл для добавления в исключения Защитника Windows
+:ADD_DEFENDER_EXCLUSION
+powershell start -verb runas powershell -ArgumentList 'Add-MpPreference -Force -ExclusionPath "%~1"'
 goto :eof
 
 :eof
