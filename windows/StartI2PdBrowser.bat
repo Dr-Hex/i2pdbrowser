@@ -38,7 +38,7 @@ echo -------------------------------------
 set watchdog=0
 :wait_i2pd
 rem Checking for code 200 HTTP/OK
-"%CURL%" -s -x http://127.0.0.1:4444 -w "%%{http_code}\n" -o nul http://i2pd.i2p/ | find "200" || (
+"%CURL%" -s -x http://127.0.0.1:4444 -w "%%{http_code}\n" -o nul http://shx5vqsw7usdaunyzr2qmes2fq37oumybpudrd4jjj4e4vk4uusa.b32.i2p/ | find "200" || (
 	if not exist i2pd.exe (
 		if "%locale%"=="ru" (
 			echo Пожалуйста, нажмите ДА в окнах UAC чтобы добавить i2pd в иключения Защитника Windows
